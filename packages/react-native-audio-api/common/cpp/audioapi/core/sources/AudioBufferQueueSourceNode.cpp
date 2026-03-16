@@ -61,7 +61,24 @@ void AudioBufferQueueSourceNode::pause() {
 void AudioBufferQueueSourceNode::enqueueBuffer(
     const std::shared_ptr<AudioBuffer> &buffer,
     size_t bufferId,
-    const std::shared_ptr<AudioBuffer> &tailBuffer) {
+    const std::shared_ptr<AudioBuffer> &tailBuffer,
+    const std::shared_ptr<AudioBuffer> &newAudioBuffer,
+    const std::shared_ptr<AudioBuffer> &newPlaybackRateBuffer) {
+  // Adapt channelCount_ to match the buffer when it differs from the node's
+  // default (2). Without this, the processing buffer has 2 channels while the
+  // enqueued buffer may be mono, causing an out-of-bounds read in
+  // processWithInterpolation. Mirrors AudioBufferSourceNode::setBuffer.
+  if (newAudioBuffer != nullptr) {
+    if (auto context = context_.lock()) {
+      context->getGraphManager()->addAudioBufferForDestruction(std::move(audioBuffer_));
+      context->getGraphManager()->addAudioBufferForDestruction(std::move(playbackRateBuffer_));
+    }
+
+    channelCount_ = buffer->getNumberOfChannels();
+    audioBuffer_ = newAudioBuffer;
+    playbackRateBuffer_ = newPlaybackRateBuffer;
+  }
+
   buffers_.emplace_back(bufferId, buffer);
 
   if (tailBuffer != nullptr) {

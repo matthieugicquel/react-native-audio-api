@@ -3,7 +3,9 @@
 #include <audioapi/HostObjects/sources/AudioBufferHostObject.h>
 #include <audioapi/core/BaseAudioContext.h>
 #include <audioapi/core/sources/AudioBufferQueueSourceNode.h>
+#include <audioapi/core/utils/Constants.h>
 #include <audioapi/types/NodeOptions.h>
+#include <audioapi/utils/AudioBuffer.h>
 #include <memory>
 #include <string>
 #include <utility>
@@ -83,9 +85,28 @@ JSI_HOST_FUNCTION_IMPL(AudioBufferQueueSourceNodeHostObject, enqueueBuffer) {
     stretchHasBeenInit_ = true;
   }
 
-  auto event = [audioBufferQueueSourceNode, copiedBuffer, bufferId = bufferId_, tailBuffer](
-                   BaseAudioContext &) {
-    audioBufferQueueSourceNode->enqueueBuffer(copiedBuffer, bufferId, tailBuffer);
+  // When the buffer's channel count differs from the node's current channel
+  // count, create new audioBuffer_ and playbackRateBuffer_ with the correct
+  // number of channels. This prevents out-of-bounds channel access in
+  // processWithInterpolation when e.g. a mono buffer is enqueued into a node
+  // that defaults to 2 channels. Mirrors AudioBufferSourceNodeHostObject::setBuffer.
+  std::shared_ptr<AudioBuffer> newAudioBuffer = nullptr;
+  std::shared_ptr<AudioBuffer> newPlaybackRateBuffer = nullptr;
+
+  if (copiedBuffer->getNumberOfChannels() != audioBufferQueueSourceNode->getChannelCount()) {
+    auto channelCount = copiedBuffer->getNumberOfChannels();
+    auto sampleRate = audioBufferQueueSourceNode->getContextSampleRate();
+
+    newAudioBuffer = std::make_shared<AudioBuffer>(
+        RENDER_QUANTUM_SIZE, channelCount, sampleRate);
+    newPlaybackRateBuffer = std::make_shared<AudioBuffer>(
+        3 * RENDER_QUANTUM_SIZE, channelCount, sampleRate);
+  }
+
+  auto event = [audioBufferQueueSourceNode, copiedBuffer, bufferId = bufferId_, tailBuffer,
+                newAudioBuffer, newPlaybackRateBuffer](BaseAudioContext &) {
+    audioBufferQueueSourceNode->enqueueBuffer(
+        copiedBuffer, bufferId, tailBuffer, newAudioBuffer, newPlaybackRateBuffer);
   };
   audioBufferQueueSourceNode->scheduleAudioEvent(std::move(event));
 

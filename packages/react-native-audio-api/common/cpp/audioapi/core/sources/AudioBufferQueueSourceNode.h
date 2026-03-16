@@ -34,7 +34,9 @@ class AudioBufferQueueSourceNode : public AudioBufferBaseSourceNode {
   void enqueueBuffer(
       const std::shared_ptr<AudioBuffer> &buffer,
       size_t bufferId,
-      const std::shared_ptr<AudioBuffer> &tailBuffer);
+      const std::shared_ptr<AudioBuffer> &tailBuffer,
+      const std::shared_ptr<AudioBuffer> &newAudioBuffer,
+      const std::shared_ptr<AudioBuffer> &newPlaybackRateBuffer);
 
   /// @note Audio Thread only
   void dequeueBuffer(size_t bufferId);
