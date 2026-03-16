@@ -12,6 +12,7 @@ import PlaybackSpeed from './PlaybackSpeed/PlaybackSpeed';
 import Record from './Record/Record';
 import Streaming from './Streaming/Streaming';
 import Worklets from './Worklets/Worklets';
+import QueueSource from './QueueSource/QueueSource';
 
 type NavigationParamList = {
   Oscillator: undefined;
@@ -26,6 +27,7 @@ type NavigationParamList = {
   Record: undefined;
   Worklets: undefined;
   Streamer: undefined;
+  QueueSource: undefined;
 };
 
 export type ExampleKey = keyof NavigationParamList;
@@ -109,5 +111,11 @@ export const Examples: Example[] = [
     title: 'Streamer',
     Icon: icons.Radio,
     screen: Streaming,
+  },
+  {
+    key: 'QueueSource',
+    title: 'Queue Source (Mono)',
+    Icon: icons.ListMusic,
+    screen: QueueSource,
   },
 ] as const;
