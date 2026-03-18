@@ -249,6 +249,28 @@ void AudioBufferQueueSourceNode::processWithInterpolation(
     auto bufferId = data.first;
     auto buffer = data.second;
 
+    // After a seek, vReadIndex_ may be past the current buffer (or several).
+    // Drain exhausted buffers before reading to avoid out-of-bounds access.
+    while (vReadIndex_ >= static_cast<double>(buffer->getSize())) {
+      playedBuffersDuration_ += buffer->getDuration();
+      vReadIndex_ -= static_cast<double>(buffer->getSize());
+      buffers_.pop_front();
+
+      sendOnBufferEndedEvent(bufferId, buffers_.empty());
+
+      if (buffers_.empty()) {
+        context->getGraphManager()->addAudioBufferForDestruction(std::move(buffer));
+        processingBuffer->zero(writeIndex, framesLeft);
+        vReadIndex_ = 0.0;
+        return;
+      }
+
+      context->getGraphManager()->addAudioBufferForDestruction(std::move(buffer));
+      data = buffers_.front();
+      bufferId = data.first;
+      buffer = data.second;
+    }
+
     while (framesLeft > 0) {
       auto readIndex = static_cast<size_t>(vReadIndex_);
       size_t nextReadIndex = readIndex + 1;
