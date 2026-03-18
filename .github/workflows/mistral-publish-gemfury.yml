@@ -1,0 +1,54 @@
+name: Mistral - Publish to Gemfury
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - mistral/v0.12.0-patches
+
+jobs:
+  publish_to_gemfury:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      AUDIO_API_DIR: packages/react-native-audio-api
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Build JS layer
+        working-directory: ${{ env.AUDIO_API_DIR }}
+        run: yarn bob build
+
+      - name: Update version and name for Gemfury
+        working-directory: ${{ env.AUDIO_API_DIR }}
+        run: |
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          COMMIT_HASH=$(git rev-parse --short HEAD)
+          NEW_VERSION="${CURRENT_VERSION}-${COMMIT_HASH}"
+          # Rename to @mistralai scope and set commit-stamped version.
+          # Done after build so yarn workspace resolution still works during build.
+          npm pkg set name="@mistralai/react-native-audio-api"
+          npm pkg set version="$NEW_VERSION"
+          echo "Will publish @mistralai/react-native-audio-api@$NEW_VERSION"
+
+      - name: Publish to Gemfury
+        env:
+          GEMFURY_UPLOAD_TOKEN: ${{ secrets.GEMFURY_UPLOAD_TOKEN }}
+        run: |
+          echo "@mistralai:registry=https://npm-proxy.fury.io/mistralai/" > .npmrc
+          echo "//npm-proxy.fury.io/mistralai/:_authToken=${GEMFURY_UPLOAD_TOKEN}" >> .npmrc
+          cd ${{ env.AUDIO_API_DIR }}
+          npm publish \
+            --registry=https://npm-proxy.fury.io/mistralai/ \
+            --tag fork \
+            --ignore-scripts
