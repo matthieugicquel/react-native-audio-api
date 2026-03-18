@@ -93,6 +93,10 @@ struct OscillatorOptions : AudioScheduledSourceNodeOptions {
 };
 
 struct BaseAudioBufferSourceOptions : AudioScheduledSourceNodeOptions {
+  BaseAudioBufferSourceOptions() {
+    channelCount = 1;
+  }
+
   bool pitchCorrection = false;
   float detune = 0.0f;
   float playbackRate = 1.0f;
