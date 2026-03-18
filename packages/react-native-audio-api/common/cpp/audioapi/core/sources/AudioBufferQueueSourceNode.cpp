@@ -302,8 +302,8 @@ void AudioBufferQueueSourceNode::processWithInterpolation(
           break;
         }
 
+        vReadIndex_ = vReadIndex_ - static_cast<double>(buffer->getSize());
         context->getGraphManager()->addAudioBufferForDestruction(std::move(buffer));
-        vReadIndex_ = vReadIndex_ - buffer->getSize();
         data = buffers_.front();
         bufferId = data.first;
         buffer = data.second;
