@@ -46,7 +46,9 @@ export default class AudioBufferQueueSourceNode extends AudioBufferBaseSourceNod
       );
     }
 
-    if (offset && offset < 0) {
+    // Upstream bug (introduced in PR #942): offset changed from optional to
+    // default=-1 but the guard wasn't updated. -1 is the "no seek" sentinel.
+    if (offset !== -1 && offset < 0) {
       throw new RangeError(
         `offset must be a finite non-negative number: ${offset}`
       );
