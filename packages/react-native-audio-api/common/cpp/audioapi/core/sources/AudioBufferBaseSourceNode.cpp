@@ -116,7 +116,9 @@ void AudioBufferBaseSourceNode::processWithPitchCorrection(
 
   // Use interpolation to avoid hard splices at buffer boundaries, which cause
   // audible clicks when the STFT analysis window straddles two queued buffers.
-  processWithInterpolation(playbackRateBuffer_, startOffset, offsetLength, playbackRate);
+  // Rate 1.0: the stretcher handles the speed change, interpolation only
+  // smooths buffer-boundary splices (no resampling).
+  processWithInterpolation(playbackRateBuffer_, startOffset, offsetLength, 1.0f);
 
   stretch_->process(
       playbackRateBuffer_.get()[0],
